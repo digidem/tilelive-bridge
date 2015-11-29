@@ -104,7 +104,7 @@ Bridge.prototype.update = function(opts, callback) {
             this._map = mapnikPool.fromString(this._xml,
                 { size: 256, bufferSize: 256 },
                 mopts);
-            this._im = ImagePool(512);
+            this._im = ImagePool(this._uri.retina === false ? 256: 512);
             return callback();
         }.bind(this));
     }.bind(this));
@@ -164,7 +164,11 @@ Bridge.prototype.getTile = function(z, x, y, callback) {
 
 Bridge.getRaster = function(source, map, im, z, x, y, callback) {
     map.bufferSize = 0;
-    map.resize(512,512);
+    if (source._uri.retina === false) {
+        map.resize(256,256)
+    } else {
+        map.resize(512,512);
+    }
     map.extent = sm.bbox(+x,+y,+z, false, '900913');
     im.clear();
     map.render(im, function(err, image) {
@@ -191,12 +195,13 @@ Bridge.getRaster = function(source, map, im, z, x, y, callback) {
                 pixel_key = r +','+ g + ',' + b + ',' + a;
             }
 
-            image.encode('webp', {}, function(err, buffer) {
+            var format = source._uri.format || 'webp'
+            image.encode(format, {}, function(err, buffer) {
                 if (err) {
                     return callback(err);
                 }
                 buffer.solid = pixel_key;
-                return callback(err, buffer, {'Content-Type':'image/webp'});
+                return callback(err, buffer, {'Content-Type':'image/' + format});
             });
         });
     });
